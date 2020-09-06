@@ -1,33 +1,36 @@
-<template
-  ><div style="width: 100%;height: 100%">
-    <l-map
-      ref="map"
-      @dblclick="onMapClick"
-      :zoom="zoom"
-      :center="[marker.position.lat, marker.position.lng]"
+<template>
+  <l-map
+    ref="map"
+    @dblclick="onMapClick"
+    :zoom="zoom"
+    :center="[
+      position.lat || userLocation.lat || defaultLocation.lat,
+      position.lng || userLocation.lng || defaultLocation.lng
+    ]"
+  >
+    <l-tile-layer
+      :url="tileProvider.url"
+      :attribution="tileProvider.attribution"
+    />
+    <l-geosearch :options="geoSearchOptions"></l-geosearch>
+    <l-marker
+      v-if="position.lat && position.lng"
+      visible
+      draggable
+      :icon="icon"
+      :lat-lng.sync="position"
+      @dragstart="dragging = true"
+      @dragend="dragging = false"
     >
-      <l-tile-layer
-        :url="tileProvider.url"
-        :attribution="tileProvider.attribution"
-      />
-      <l-geosearch :options="geoSearchOptions"></l-geosearch>
-      <l-marker
-        visible
-        draggable
-        :lat-lng.sync="marker.position"
-        @update:latLng="onPositionChange"
-        @dragstart="dragging = true"
-        @dragend="dragging = false"
-      >
-        <l-tooltip :content="tooltipContent" :options="{ permanent: true }" />
-      </l-marker>
-    </l-map>
-  </div>
+      <l-tooltip :content="tooltipContent" :options="{ permanent: true }" />
+    </l-marker>
+  </l-map>
 </template>
 <script>
 import { LMap, LMarker, LTileLayer, LTooltip } from "vue2-leaflet";
 import { OpenStreetMapProvider } from "leaflet-geosearch";
 import LGeosearch from "vue2-leaflet-geosearch";
+import { icon } from "leaflet";
 export default {
   name: "LocationInput",
   components: {
@@ -44,21 +47,28 @@ export default {
     },
     defaultLocation: {
       type: Object,
-      default: () => ({ lat: 8.9806, lng: 38.7578 })
+      default: () => ({
+        lat: 8.9806,
+        lng: 38.7578
+      })
     }
   },
   data() {
     return {
+      loading: false,
       geoSearchOptions: {
         provider: new OpenStreetMapProvider(),
         showMarker: false,
-        autoClose: true,
-        position: "topleft"
+        autoClose: true
       },
-      marker: {
-        position: { ...this.defaultLocation }
-      },
-      address:null,
+      userLocation: {},
+      icon: icon({
+        iconRetinaUrl: require("leaflet/dist/images/marker-icon-2x.png"),
+        iconUrl: require("leaflet/dist/images/marker-icon.png"),
+        shadowUrl: require("leaflet/dist/images/marker-shadow.png")
+      }),
+      position: {},
+      address: "",
       tileProvider: {
         attribution:
           '&copy; <a target="_blank" href="http://osm.org/copyright">OpenStreetMap</a> contributors',
@@ -71,48 +81,62 @@ export default {
   mounted() {
     this.getUserPosition();
     this.$refs.map.mapObject.on("geosearch/showlocation", this.onSearch);
-    console.log(this.marker)
+  },
+
+  watch: {
+    position: {
+      deep: true,
+      async handler(value) {
+        this.address = await this.getAddress();
+        this.$emit("input", { position: value, address: this.address });
+      }
+    }
   },
   computed: {
     tooltipContent() {
-      return this.dragging
-        ? `Place the marker on your location choice`
-        : `<strong>${this.address ||
-            "Loading..."}</strong> <hr/><strong>lat:</strong> ${
-            this.marker.position.lat
-          }<br/> <strong>lng:</strong> ${this.marker.position.lng}`;
+      if (this.dragging) return "...";
+      if (this.loading) return "Loading...";
+      return `<strong>${this.address.replace(
+        ",",
+        "<br/>"
+      )}</strong> <hr/><strong>lat:</strong> ${
+        this.position.lat
+      }<br/> <strong>lng:</strong> ${this.position.lng}`;
     }
   },
   methods: {
-    async onPositionChange(value) {
-      this.address = await this.getAddress();
-      this.$emit("input", value);
-    },
     async getAddress() {
-      const { lat, lng } = this.marker.position;
-      const result = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`
-      );
-      const body = await result.json();
-      console.log(body);
-      if (result.status === 400) {
-        return "Address could not be retrieved";
+      this.loading = true;
+      let address = "Unresolved address";
+      try {
+        const { lat, lng } = this.position;
+        const result = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`
+        );
+        if (result.status === 200) {
+          const body = await result.json();
+          address = body.display_name;
+        }
+      } catch (e) {
+        console.error("Reverse Geocode Error->", e);
       }
-      return body.name || body.display_name;
+      this.loading = false;
+      return address;
     },
     async onMapClick(value) {
       // place the marker on the clicked spot
-      this.marker.position = value.latlng;
+      this.position = value.latlng;
     },
     onSearch(value) {
       const loc = value.location;
-      this.marker.position = { lat: loc.y, lng: loc.x };
+      this.position = { lat: loc.y, lng: loc.x };
     },
     async getUserPosition() {
       if (navigator.geolocation) {
-        // get position
-        navigator.geolocation.getCurrentPosition(async pos => {
-          this.marker.position = {
+        // get GPS position
+        navigator.geolocation.getCurrentPosition(pos => {
+          // set the user location
+          this.userLocation = {
             lat: pos.coords.latitude,
             lng: pos.coords.longitude
           };
