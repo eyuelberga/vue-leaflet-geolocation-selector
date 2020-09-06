@@ -10,5 +10,5 @@ cd dist
 git init
 git add -A
 git commit -m 'deploy'
-git push -f git@github.com:eyuelberga/vue-leaflet-geolocation-selector:gh-pages
+git push -f git@github.com:eyuelberga/vue-leaflet-geolocation-selector master:gh-pages
 cd -
