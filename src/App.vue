@@ -5,43 +5,46 @@
         <v-layout wrap>
           <v-flex md12>
             <v-card outlined>
-              <v-list-item>
+              <v-list-item v-if="!location.position">
                 <v-list-item-avatar size="60">
-                  <v-icon
+                  <v-icon dark
                     large
-                    :class="
-                      `${location.position ? 'success' : 'primary'} white--text`
+                    class="
+                      primary white--text`
                     "
-                    >{{
-                      location.position
-                        ? "mdi-map-marker-check"
-                        : "mdi-map-marker"
-                    }}</v-icon
+                    >mdi-map-marker</v-icon
                   >
                 </v-list-item-avatar>
-                <v-list-item-content v-if="!location.position">
+                <v-list-item-content>
                   <v-list-item-title class="title"
                     >No Location selected</v-list-item-title
                   >
                 </v-list-item-content>
-                <v-list-item-content v-else>
-                  <v-list-item>
-                    <v-list-item-content>
-                      <v-list-item-title class="title">{{
-                        location.address
-                      }}</v-list-item-title>
-                      <v-list-item-subtitle>
-                        Latitude: {{ location.position.lat }}
-                      </v-list-item-subtitle>
-                      <v-list-item-subtitle>
-                        Longitude: {{ location.position.lng }}
-                      </v-list-item-subtitle>
-                    </v-list-item-content>
-                    <v-list-item-action>
-                      <v-btn color="error" @click="reset">Reset</v-btn>
-                    </v-list-item-action>
-                  </v-list-item>
+              </v-list-item>
+              <v-list-item v-else>
+                <v-list-item-avatar size="60">
+                  <v-icon
+                    large
+                    class="
+                      success white--text
+                    "
+                    >mdi-map-marker-check</v-icon
+                  >
+                </v-list-item-avatar>
+                <v-list-item-content>
+                  <v-list-item-title class="title text-wrap">{{
+                    location.address
+                  }}</v-list-item-title>
+                  <v-list-item-subtitle>
+                    Latitude: {{ location.position.lat }}
+                  </v-list-item-subtitle>
+                  <v-list-item-subtitle>
+                    Longitude: {{ location.position.lng }}
+                  </v-list-item-subtitle>
                 </v-list-item-content>
+                <v-list-item-action>
+                  <v-btn color="error" @click="reset">Reset</v-btn>
+                </v-list-item-action>
               </v-list-item>
             </v-card>
           </v-flex>
@@ -94,7 +97,7 @@
 </template>
 
 <script>
-import GeolocationSelector from "./components/GeolocationSelector";
+import GeolocationSelector from "./components/GeolocationSelectorMap";
 
 export default {
   name: "App",
