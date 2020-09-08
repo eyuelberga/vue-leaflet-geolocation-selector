@@ -1,5 +1,5 @@
 # vue-leaflet-geolocation-selector
-
+* Read blog post at: https://medium.com/swlh/create-an-interactive-location-selector-with-vue-js-and-leaflet-5808c55b4636
 ## Project setup
 ```
 yarn install
